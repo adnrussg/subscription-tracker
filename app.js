@@ -1,6 +1,6 @@
 import express from 'express';
 
-import { PORT } from './config/env.js';
+import { PORT, SERVER_URL } from './config/env.js';
 import userRouter from './routes/user.routes.js';
 import authRouter from './routes/auth.routes.js';
 import subscriptionRouter from './routes/subscription.routes.js';
@@ -27,7 +27,7 @@ app.get('/', (req, res) => {
     res.send('Backend Subscription Tracker API');
 });
 
-app.listen(PORT, async () => {
-    console.log(`Subscription Tracker API is running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', async () => {
+    console.log(`Subscription Tracker API is running on http://${SERVER_URL || '0.0.0.0'}:${PORT}`);
     await connectToDatabase();
 })
