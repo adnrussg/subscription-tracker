@@ -16,49 +16,35 @@ export const sendReminders = serve(async (context) => {
   const renewalDate = dayjs(subscription.renewalDate);
 
   if (renewalDate.isBefore(dayjs())) {
-    console.log(
-      `Renewal date has passed for subscription ${subscriptionId}. Stopping workflow.`
-    );
+    console.log(`Renewal date has passed for subscription ${subscriptionId}. Stopping workflow.`);
     return;
   }
 
-  // Process reminders in descending order (farthest to closest to renewal date)
-  const remindersToProcess = [...REMINDERS].sort((a, b) => b - a);
-  
-  // Find the next applicable reminder
-  for (const daysBefore of remindersToProcess) {
-    const reminderDate = renewalDate.subtract(daysBefore, "day");
-    const reminderLabel = `${daysBefore} days before reminder`;
-    const today = dayjs();
-
-    // If reminder date is in the future, sleep until then
-    if (reminderDate.isAfter(today)) {
-      console.log(`Scheduling ${reminderLabel} for ${reminderDate.format()}`);
-      await sleepUntilReminder(
-        context,
-        reminderLabel,
-        reminderDate
-      );
-      
-      // After waking up, trigger the reminder
-      await triggerReminder(
-        context,
-        reminderLabel,
-        subscription
-      );
-    } 
-    // If today is the reminder date, trigger immediately
-    else if (today.isSame(reminderDate, "day")) {
-      console.log(`Today is the day for ${reminderLabel}`);
-      await triggerReminder(
-        context,
-        reminderLabel,
-        subscription
-      );
-    }
-    // Skip reminders that have already passed
-  }
+  // Process each reminder sequentially
+  await processReminder(context, subscription, renewalDate, 0);
 });
+
+// Process reminders one at a time in sequence
+const processReminder = async (context, subscription, renewalDate, index) => {
+  if (index >= REMINDERS.length) return;
+  
+  const daysBefore = REMINDERS[index];
+  const reminderDate = renewalDate.subtract(daysBefore, "day");
+  const reminderLabel = `${daysBefore} days before reminder`;
+
+  // If reminder date is in future, sleep until then
+  if (reminderDate.isAfter(dayjs())) {
+    await sleepUntilReminder(context, `Reminder ${daysBefore} days before`, reminderDate);
+  }
+
+  // When we wake up or if it's due today, trigger the reminder
+  if (dayjs().isSame(reminderDate, "day")) {
+    await triggerReminder(context, reminderLabel, subscription);
+  }
+
+  // Process next reminder
+  await processReminder(context, subscription, renewalDate, index + 1);
+};
 
 const fetchSubscription = async (context, subscriptionId) => {
   return await context.run("get subscription", async () => {
