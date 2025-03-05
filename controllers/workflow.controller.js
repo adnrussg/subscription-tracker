@@ -22,25 +22,41 @@ export const sendReminders = serve(async (context) => {
     return;
   }
 
-  for (const daysBefore of [...REMINDERS].sort((a, b) => b - a)) {
+  // Process reminders in descending order (farthest to closest to renewal date)
+  const remindersToProcess = [...REMINDERS].sort((a, b) => b - a);
+  
+  // Find the next applicable reminder
+  for (const daysBefore of remindersToProcess) {
     const reminderDate = renewalDate.subtract(daysBefore, "day");
     const reminderLabel = `${daysBefore} days before reminder`;
+    const today = dayjs();
 
-    if (reminderDate.isAfter(dayjs())) {
+    // If reminder date is in the future, sleep until then
+    if (reminderDate.isAfter(today)) {
+      console.log(`Scheduling ${reminderLabel} for ${reminderDate.format()}`);
       await sleepUntilReminder(
         context,
         reminderLabel,
         reminderDate
       );
-    }
-
-    if (dayjs().isSame(reminderDate, "day") || dayjs().isAfter(reminderDate)) {
+      
+      // After waking up, trigger the reminder
+      await triggerReminder(
+        context,
+        reminderLabel,
+        subscription
+      );
+    } 
+    // If today is the reminder date, trigger immediately
+    else if (today.isSame(reminderDate, "day")) {
+      console.log(`Today is the day for ${reminderLabel}`);
       await triggerReminder(
         context,
         reminderLabel,
         subscription
       );
     }
+    // Skip reminders that have already passed
   }
 });
 
