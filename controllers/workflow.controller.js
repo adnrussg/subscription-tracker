@@ -34,7 +34,8 @@ const processReminder = async (context, subscription, renewalDate, index) => {
 
   // If reminder date is in future, sleep until then
   if (reminderDate.isAfter(dayjs())) {
-    await sleepUntilReminder(context, `Reminder ${daysBefore} days before`, reminderDate);
+    // Use the same label format!
+    await sleepUntilReminder(context, reminderLabel, reminderDate);
   }
 
   // When we wake up or if it's due today, trigger the reminder
@@ -53,7 +54,7 @@ const fetchSubscription = async (context, subscriptionId) => {
 };
 
 const sleepUntilReminder = async (context, label, date) => {
-  console.log(`Sleeping until ${label} reminder at ${date}`);
+  console.log(`Sleeping until ${label} at ${date}`);
   await context.sleepUntil(label, date.toDate());
 };
 
